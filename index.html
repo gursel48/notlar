@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ortak alan</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f4f8;
+      margin: 0;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      padding-bottom: 80px;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 860px;
+    }
+
+    .menu-container, .quiz-container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      width: 100%;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .menu-btn {
+      border: none;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: left;
+      cursor: pointer;
+      background: linear-gradient(135deg, #007bff, #0056b3);
+      color: white;
+    }
+
+    .menu-btn.locked {
+      background: linear-gradient(135deg, #6c757d, #495057);
+      cursor: not-allowed;
+      order: 999;
+      opacity: 0.85;
+    }
+
+    .wrong-menu-btn {
+      border: none;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: left;
+      cursor: pointer;
+      background: linear-gradient(135deg, #dc3545, #a71d2a);
+      color: white;
+      order: 9999;
+      animation: wrongBlink 10s infinite;
+    }
+
+    @keyframes wrongBlink {
+      0%, 45% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(220,53,69,0);
+      }
+      50% {
+        opacity: 0.35;
+        transform: scale(1.02);
+        box-shadow: 0 0 18px rgba(220,53,69,0.45);
+      }
+      55%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(220,53,69,0);
+      }
+    }
+
+    .quiz-container {
+      display: none;
+      position: relative;
+      padding-top: 85px;
+      min-height: 100vh;
+    }
+
+    .progress-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 6px;
+      background: #28a745;
+      transition: 0.3s;
+      width: 0%;
+      border-radius: 14px 14px 0 0;
+    }
+
+    .main-menu-btn {
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: calc(1rem + 4pt);
+      color: #333;
+      padding: 5px 0;
+    }
+
+    .header-info {
+      position: absolute;
+      top: 15px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding-right: 110px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      min-width: 0;
+      flex: 1;
+      flex-wrap: wrap;
+    }
+
+    .header-subject {
+      font-weight: normal;
+      color: #777;
+      font-size: 0.95rem;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .retry-badge {
+      display: none;
+      margin-bottom: 12px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffe69c;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    .question-title {
+      margin-top: 0;
+      margin-bottom: 16px;
+      line-height: 1.45;
+      font-size: 1.2rem;
+      color: #222;
+    }
+
+    .option-btn {
+      width: 100%;
+      padding: 16px;
+      margin-bottom: 12px;
+      border-radius: 12px;
+      border: 2px solid #e9ecef;
+      background: #f8f9fa;
+      text-align: left;
+      cursor: pointer;
+      font-size: 1.05rem;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+      position: relative;
+    }
+
+    .option-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    }
+
+    .option-btn:disabled {
+      cursor: default;
+    }
+
+    .option-btn.correct {
+      background: #d4edda !important;
+      border-color: #28a745 !important;
+      color: #155724 !important;
+      font-weight: bold;
+    }
+
+    .option-btn.wrong {
+      background: #f8d7da !important;
+      border-color: #dc3545 !important;
+      color: #721c24 !important;
+      font-weight: bold;
+    }
+
+    .tick {
+      display: inline-block;
+      margin-left: 10px;
+      color: #1f9d45;
+      font-weight: bold;
+      opacity: 0;
+      transform: scale(0.4);
+    }
+
+    .tick.show {
+      animation: popTick 0.45s ease forwards;
+    }
+
+    @keyframes popTick {
+      0%   { opacity: 0; transform: scale(0.4); }
+      60%  { opacity: 1; transform: scale(1.2); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .explanation {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      background: #eaf2f8;
+      border-left: 5px solid #2980b9;
+      border-radius: 8px;
+      line-height: 1.5;
+    }
+
+    .nav-controls {
+      display: flex;
+      gap: 12px;
+      margin-top: 25px;
+    }
+
+    .nav-btn {
+      flex: 1;
+      padding: 18px;
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .next-btn { background: #007bff; }
+    .prev-btn {
+      background: #e9ecef;
+      color: #dc3545 !important;
+      border: 1px solid #ddd;
+    }
+
+    .quiz-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+      color: #666;
+      font-weight: bold;
+      font-size: 0.9rem;
+      flex-wrap: wrap;
+    }
+
+    .disclaimer-box {
+      margin-top: 20px;
+      padding: 15px;
+      background: #fdfdfd;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      color: #888;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    .disclaimer-title {
+      display: block;
+      font-weight: bold;
+      color: #555;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+    }
+
+    .source-tag {
+      position: fixed;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(0, 0, 0, 0.05);
+      color: #777;
+      padding: 5px 10px;
+      border-radius: 10px;
+      font-size: 0.72rem;
+      font-weight: bold;
+      z-index: 9999;
+    }
+
+    .reset-set-btn {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      background: #ffc107;
+      border: none;
+      padding: 8px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 0.8rem;
+      cursor: pointer;
+      z-index: 5;
+    }
+
+    @media (max-width: 480px) {
+      .quiz-container {
+        padding-top: 110px;
+      }
+
+      .header-info {
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        padding-right: 104px;
+        align-items: flex-start;
+      }
+
+      .header-left {
+        display: block;
+        padding-right: 6px;
+      }
+
+      .main-menu-btn {
+        display: block;
+        font-size: 0.95rem;
+        padding: 0;
+        margin-bottom: 6px;
+      }
+
+      .header-subject {
+        display: block;
+        margin: 0;
+        font-size: 0.82rem;
+        line-height: 1.3;
+        max-width: 100%;
+      }
+
+      .question-title {
+        font-size: 1.05rem;
+      }
+
+      .option-btn {
+        font-size: 1rem;
+        padding: 14px;
+      }
+
+      .reset-set-btn {
+        top: 12px;
+        right: 12px;
+        font-size: 0.75rem;
+        padding: 7px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div id="menuContainer" class="menu-container">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:20px;">
+      <h1 id="mainTitle" style="margin:0;">ortak alan</h1>
+      <button onclick="clearAllStatistics()" style="background:#dc3545; color:white; border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:0.75rem;">
+        Verileri Sıfırla
+      </button>
+<button onclick="shuffleAllQuestions()" style="background:#28a745;color:white;border:none;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:0.75rem;">Soruları Karıştır</button>
+
+    </div>
+
+    <div id="menuGrid" class="menu-grid"></div>
+
+    <div class="disclaimer-box">
+      <span class="disclaimer-title">⚠️ Önemli Uyarı</span>
+      Bu sistemde yer alan içerikler yalnızca eğitim amaçlıdır. İçeriklerin kullanımından doğabilecek doğrudan veya dolaylı hiçbir sorumluluk kabul edilmez. Tüm kullanım sorumluluğu kullanıcıya aittir.
+    </div>
+  </div>
+
+  <div id="quizContainer" class="quiz-container">
+    <div class="progress-bar" id="progressBar"></div>
+
+    <div class="header-info">
+      <div class="header-left">
+        <button onclick="showMenu()" class="main-menu-btn">☰ Ana Menü</button>
+        <span id="headerSubject" class="header-subject"></span>
+      </div>
+    </div>
+
+    <button onclick="resetCurrentSet()" class="reset-set-btn">Seti Sıfırla</button>
+
+    <div id="retryBadge" class="retry-badge">Yalnış cevaplanan soru</div>
+    <h2 id="questionText" class="question-title">...</h2>
+
+    <div id="optionsArea"></div>
+
+    <div class="quiz-footer">
+      <div id="footerLeft">Kalan: 0</div>
+      <div id="footerRight">0 / 0</div>
+    </div>
+
+    <div id="explanationArea" class="explanation"></div>
+
+    <div class="nav-controls">
+      <button id="prevBtn" class="nav-btn prev-btn" onclick="goBack()" style="visibility:hidden;">❮ Önceki</button>
+      <button id="nextBtn" class="nav-btn next-btn" onclick="goForward()" style="visibility:hidden;">Yeni Soru ❯</button>
+    </div>
+  </div>
+</div>
+
+<div class="source-tag" id="sourceTag">Kaynak: yapayzeka/ balik_besleme_ve_yem_teknolojisi_versiyon_1</div>
+
+<script>
+  const BASE_SUBJECT = "ortak alan";
+  const VERSION_NUMBER = 6;
+
+  function buildVersionName(base, version) {
+    return `${base} Versiyon ${version}`;
+  }
+
+  function buildVersionSlug(base, version) {
+    return `${base.toLowerCase().replace(/ç/g, "c").replace(/ğ/g, "g").replace(/ı/g, "i").replace(/ö/g, "o").replace(/ş/g, "s").replace(/ü/g, "u").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")}_versiyon_${version}`;
+  }
+
+  const CURRENT_SUBJECT = BASE_SUBJECT;
+  const VERSION_SLUG = buildVersionSlug(BASE_SUBJECT, VERSION_NUMBER);
+  const SOURCE_TEXT = `Kaynak: 2_versiyon_soru_havuzu_versiyon_3`;
+  const QUESTIONS_PER_SET = 30;
+
+  const questions = [
+{"q": "Balıklar enerji ihtiyacını öncelikle hangi besin grubundan karşılar?", "o": ["Karbonhidratlar", "Vitaminler", "Yağlar", "Mineraller"], "c": 2, "e": ""},
+{"q": "Aşağıdakilerden hangisi balık yemlerinde en kaliteli protein kaynağı olarak kabul edilir?", "o": ["Balık unu", "Soya küspesi", "Mısır gluteni", "Buğday kepeği"], "c": 0, "e": ""},
+{"q": "Ekstrüder yemlerin en önemli özelliği aşağıdakilerden hangisidir?", "o": ["Suda hemen çözünmeleri", "Sindirilebilirliğinin yüksek olması", "Protein oranının düşük olması", "Yağ içermemesi"], "c": 1, "e": ""},
+{"q": "Yem değerlendirme oranı (FCR) ile ilgili aşağıdaki ifadelerden hangisi doğrudur?", "o": ["Yüksek olması tercih edilir", "Düşük olması kaliteyi gösterir", "Sadece deniz balıkları için önemlidir", "Protein oranını ifade eder"], "c": 1, "e": ""},
+{"q": "Soğuk su balıkları için gerekli temel yağ asidi aşağıdakilerden hangisidir?", "o": ["Omega-6", "Omega-9", "Omega-3", "Linoleik asit"], "c": 2, "e": ""},
+{"q": "Soya küspesinde bulunan ve ısıyla yok edilen zararlı madde aşağıdakilerden hangisidir?", "o": ["Histamin", "Mikotoksin", "Tripsin inhibitörü", "Selüloz"], "c": 2, "e": ""},
+{"q": "Balıklarda fosfor eksikliği aşağıdakilerden hangisine neden olur?", "o": ["Solungaç nekrozu", "Karaciğer yağlanması", "İskelet bozukluğu", "Pullarda dökülme"], "c": 2, "e": ""},
+{"q": "Balıklarda en güvenli ve ucuz dezenfektan olarak kullanılan madde aşağıdakilerden hangisidir?", "o": ["İyot", "Formalin", "Tuz (NaCl)", "Potasyum permanganat"], "c": 2, "e": ""},
+{"q": "Tuz (NaCl) uygulamasının balıklardaki temel etkilerinden biri aşağıdakilerden hangisidir?", "o": ["Viral hastalıkları tedavi etmesi", "Solungaç gelişimini artırması", "Balığın stresini azaltması", "Kemik yapısını güçlendirmesi"], "c": 2, "e": ""},
+{"q": "Kloramin-T aşağıdaki hangi etkene karşı kullanılmaktadır?", "o": ["Solungaç bakterileri", "İç parazitler", "Viral enfeksiyonlar", "Mantar hastalıkları"], "c": 0, "e": ""},
+{"q": "İyot (Iodophor) aşağıdaki hangi amaçla kullanılır?", "o": ["Balık büyütme", "Solungaç tedavisi", "Yumurta dezenfeksiyonu", "Su sertliğini artırma"], "c": 2, "e": ""},
+{"q": "Aşağıdakilerden hangisi bakteriyel hastalıklarda kullanılan tedavi yöntemidir?", "o": ["Antibiyotik kullanımı", "Tuzsuz su uygulaması", "Vitamin kısıtlaması", "Aşırı ışıklandırma"], "c": 0, "e": ""},
+{"q": "Viral hastalıklarla ilgili aşağıdaki ifadelerden hangisi doğrudur?", "o": ["Antibiyotiklerle tamamen tedavi edilir", "Antibiyotik kullanılmaz", "Sadece tuz kullanılır", "Yalnızca yem değişikliği yapılır"], "c": 1, "e": ""},
+{"q": "Kızıl Ağız hastalığının etkeni aşağıdakilerden hangisidir?", "o": ["Aeromonas hydrophila", "Vibrio anguillarum", "Yersinia ruckeri", "Pseudomonas fluorescens"], "c": 2, "e": ""},
+{"q": "Beyaz Benek paraziti ile mücadelede ilaçların etkili olduğu dönem aşağıdakilerden hangisidir?", "o": ["Parazitin deri altına yerleştiği dönem", "Parazitin suya geçtiği dönem", "Yumurtlama dönemi", "Balığın aç bırakıldığı dönem"], "c": 1, "e": ""},
+{"q": "Aşağıdaki parazitlerden hangisi doğurarak çoğalır?", "o": ["Dactylogyrus", "Ichthyophthirius", "Gyrodactylus", "Lernaea"], "c": 2, "e": ""},
+{"q": "Dactylogyrus ile ilgili aşağıdaki bilgilerden hangisi doğrudur?", "o": ["Vücut parazitidir ve doğurur", "Solungaç parazitidir ve yumurtlar", "Viral hastalık oluşturur", "Deri altında yaşar"], "c": 1, "e": ""},
+{"q": "Balıklarda Vitamin C eksikliği aşağıdakilerden hangisine neden olur?", "o": ["Solungaç nekrozu", "Karaciğer yağlanması", "Omurga eğriliği", "Pullarda dökülme"], "c": 2, "e": ""},
+{"q": "Aşağıdakilerden hangisi ihbarı mecburi viral hastalıklardan biridir?", "o": ["VHS", "Columnaris", "Saprolegnia", "Furunkulozis"], "c": 0, "e": ""},
+{"q": "İhbarı mecburi hastalık görülen işletmelerde uygulanabilecek yöntem aşağıdakilerden hangisidir?", "o": ["Serbest satış", "Karantina ve itlaf", "Tuz banyosu", "Sadece yem değişimi"], "c": 1, "e": ""},
+{"q": "Su ürünleri işletmelerinde en büyük gider kalemi aşağıdakilerden hangisidir?", "o": ["İşçilik", "Yakıt", "Yem", "Elektrik"], "c": 2, "e": ""},
+{"q": "Aşağıdaki varlıklardan hangisi için amortisman ayrılmaz?", "o": ["Makine", "Arazi", "Havuz sistemi", "Soğuk hava deposu"], "c": 1, "e": ""},
+{"q": "Damızlık balıklar aşağıdaki hangi sermaye grubunda değerlendirilir?", "o": ["Döner varlık", "İşletme sermayesi", "Sabit sermaye", "Cari varlık"], "c": 2, "e": ""},
+{"q": "Satılacak balıklar aşağıdaki hangi gruba girer?", "o": ["Sabit sermaye", "Canlı demirbaş", "İşletme sermayesi", "Duran varlık"], "c": 2, "e": ""},
+{"q": "Bir yatırımın karlı sayılabilmesi için rantabilite aşağıdakilerden hangisinden yüksek olmalıdır?", "o": ["Yalnızca üretim maliyetinden", "Sadece döviz kurundan", "Enflasyon ve banka faizinden", "İşçilik giderlerinden"], "c": 2, "e": ""},
+{"q": "Fırsat maliyeti aşağıdakilerden hangisini ifade eder?", "o": ["Üretim giderlerinin toplamını", "Vazgeçilen alternatif gelir değerini", "İşletmenin sabit giderlerini", "Vergi sonrası net karı"], "c": 1, "e": ""},
+{"q": "Ölçek ekonomisinin temel sonucu aşağıdakilerden hangisidir?", "o": ["Sabit maliyetlerin artması", "İşçilik giderlerinin tamamen ortadan kalkması", "Birim başına düşen sabit maliyetin azalması", "Üretimin durması"], "c": 2, "e": ""},
+{"q": "Büyük işletmelerin daha avantajlı olmasını açıklayan kavram aşağıdakilerden hangisidir?", "o": ["Fırsat maliyeti", "Ölçek ekonomisi", "Amortisman", "Rantabilite"], "c": 1, "e": ""},
+{"q": "Aşağıdakilerden hangisi su ürünlerinde tek yetkili otoritedir?", "o": ["Çevre Bakanlığı", "Tarım ve Orman Bakanlığı", "İçişleri Bakanlığı", "Ulaştırma Bakanlığı"], "c": 1, "e": ""},
+{"q": "Gerçek kişi su ürünleri ruhsatının geçerlilik süresi kaç yıldır?", "o": ["2 yıl", "3 yıl", "5 yıl", "10 yıl"], "c": 2, "e": ""},
+{"q": "Türk vatandaşlarının amatör balıkçılık belgesi alması ile ilgili aşağıdaki ifadelerden hangisi doğrudur?", "o": ["Her yıl yenilenmesi zorunludur", "Ticari balıkçılar için zorunludur", "Alınması zorunlu değildir", "Sadece denizlerde zorunludur"], "c": 2, "e": ""},
+{"q": "Aşağıdaki bölgelerden hangisinde trol avcılığı yasaktır?", "o": ["Ege Denizi", "Karadeniz", "Akdeniz", "Marmara Denizi"], "c": 3, "e": ""},
+{"q": "Dinamit, zehir veya elektrik ile avcılık yapılmasının cezası aşağıdakilerden hangisidir?", "o": ["Sadece idari para cezası", "Ruhsat yenilememe", "Hapis cezası", "Uyarı cezası"], "c": 2, "e": ""},
+{"q": "Yunus ve fok gibi deniz memelilerinin avlanması ile ilgili aşağıdaki ifadelerden hangisi doğrudur?", "o": ["Belirli dönemlerde serbesttir", "Ticari amaçla yapılabilir", "Sadece amatör avcılıkta yasaktır", "Kesinlikle yasaktır"], "c": 3, "e": ""},
+{"q": "Tırıvırı (Paraşüt) adı verilen ağ ile ilgili aşağıdakilerden hangisi doğrudur?", "o": ["Sadece iç sularda kullanılabilir", "Kullanımı ve satışı yasaktır", "Amatör balıkçılıkta serbesttir", "Bakanlık izniyle kullanılabilir"], "c": 1, "e": ""},
+{"q": "Limanlarda, askeri bölgelerde ve baraj kapaklarına kaç metre mesafede avcılık yasaktır?", "o": ["100 metre", "250 metre", "500 metre", "1000 metre"], "c": 2, "e": ""},
+{"q": "TVB-N değeri kaç mg/100 g’ın üzerinde olduğunda ürün tüketilemez kabul edilir?", "o": ["25", "30", "35", "40"], "c": 2, "e": ""},
+{"q": "TMA (Trimetilamin) aşağıdaki hangi balıklarda bayatlama göstergesi olarak ölçülür?", "o": ["Tatlı su balıkları", "Deniz balıkları", "Sazan balıkları", "Kabuklu canlılar"], "c": 1, "e": ""},
+{"q": "Rigor Mortis ile ilgili aşağıdaki ifadelerden hangisi doğrudur?", "o": ["İleri düzey bozulma belirtisidir", "Kimyasal zehirlenme göstergesidir", "Taze balığın önemli göstergesidir", "Paraziter hastalık belirtisidir"], "c": 2, "e": ""},
+{"q": "Glaso (Glazing) uygulamasının amacı aşağıdakilerden hangisidir?", "o": ["Balığın protein oranını artırmak", "Oksidasyon ve kurumayı önlemek", "Parazit oluşumunu hızlandırmak", "Balığın rengini değiştirmek"], "c": 1, "e": ""},
+{"q": "Histamin zehirlenmesi genellikle aşağıdaki hangi durum sonucunda oluşur?", "o": ["Aşırı pişirme", "Soğuk zincirin kırılması", "Tuz oranının artması", "Dondurmanın uzun sürmesi"], "c": 1, "e": ""},
+{"q": "Histamin zehirlenmesi en çok aşağıdaki hangi balıklarda görülür?", "o": ["Alabalık ve sazan", "Levrek ve çipura", "Uskumru ve ton balığı", "Yayın ve kefal"], "c": 2, "e": ""},
+{"q": "Su ürünlerinde sıfır tolerans uygulanan en tehlikeli patojen bakteri aşağıdakilerden hangisidir?", "o": ["Vibrio", "Salmonella", "Aeromonas", "Streptococcus"], "c": 1, "e": ""},
+{"q": "HACCP sistemi ile ilgili aşağıdaki ifadelerden hangisi doğrudur?", "o": ["Sadece son ürünü kontrol eder", "Hatayı oluştuktan sonra düzeltir", "Hatayı önlemeye yönelik bir sistemdir", "Yalnızca depolamada uygulanır"], "c": 2, "e": ""},
+{"q": "Donmuş ürünlerin çözdürüldükten sonra tekrar dondurulması ile ilgili aşağıdaki ifadelerden hangisi doğrudur?", "o": ["Güvenlidir", "Protein kaybını önler", "Tavsiye edilir", "Asla yapılmamalıdır"], "c": 3, "e": ""},
+{"q": "Donmuş ürünlerin en sağlıklı çözdürme yöntemi aşağıdakilerden hangisidir?", "o": ["Güneşte bekletme", "Oda sıcaklığında çözündürme", "Buzdolabında yavaş çözündürme", "Sıcak su içinde çözündürme"], "c": 2, "e": ""},
+{"q": "BOİ (Biyolojik Oksijen İhtiyacı) aşağıdakilerden hangisini ölçer?", "o": ["Toplam metal miktarını", "Biyolojik olarak parçalanabilen kirliliği", "Sudaki tuzluluğu", "Yalnızca kimyasal kirliliği"], "c": 1, "e": ""},
+{"q": "KOİ (Kimyasal Oksijen İhtiyacı) ile ilgili aşağıdaki ifadelerden hangisi doğrudur?", "o": ["BOİ’den her zaman küçüktür", "Sadece biyolojik kirliliği ölçer", "Toplam organik kirliliği ölçer", "Azot miktarını gösterir"], "c": 2, "e": ""},
+{"q": "Aşağıdakilerden hangisi ötrofikasyonun temel nedenidir?", "o": ["Kalsiyum ve magnezyum artışı", "Azot ve fosfor fazlalığı", "Tuzluluk azalması", "Çözünmüş oksijen artışı"], "c": 1, "e": ""},
+{"q": "Aktif çamur sistemi aşağıdaki hangi arıtma yöntemine örnektir?", "o": ["Fiziksel arıtma", "Kimyasal arıtma", "Mekanik arıtma", "Biyolojik arıtma"], "c": 3, "e": ""},
+{"q": "Su sıcaklığı arttığında sudaki oksijen miktarı nasıl değişir?", "o": ["Artar", "Azalır", "Sabit kalır", "Önce artar sonra azalır"], "c": 1, "e": ""},
+{"q": "Balıklar için en zehirli azot formu aşağıdakilerden hangisidir?", "o": ["Nitrat", "Amonyak", "Azot gazı", "Sülfat"], "c": 1, "e": ""},
+{"q": "Nitritin (NO2) balıklar üzerindeki etkisi ile ilgili aşağıdaki ifadelerden hangisi doğrudur?", "o": ["Zararsızdır", "Vitamin görevi görür", "Zehirli azot formlarındandır", "Oksijen miktarını artırır"], "c": 2, "e": ""},
+{"q": "Ağır metallerin canlı bünyesinde birikmesine ne ad verilir?", "o": ["Biyofiltrasyon", "Biyobozunma", "Biyobirikim", "Sedimentasyon"], "c": 2, "e": ""},
+{"q": "Aşağıdaki ağır metallerden hangisi biyolojik olarak parçalanmaz?", "o": ["Cıva", "Kalsiyum", "Potasyum", "Sodyum"], "c": 0, "e": ""},
+{"q": "Su Kirliliği Kontrolü Yönetmeliği’ne göre alabalık yetiştiriciliği hangi sınıf sularda yapılabilir?", "o": ["II. sınıf", "III. sınıf", "IV. sınıf", "I. sınıf"], "c": 3, "e": ""}
+];;
+
+  document.getElementById("mainTitle").textContent = `${BASE_SUBJECT} Deneme Sınavı`;
+  document.getElementById("headerSubject").textContent = BASE_SUBJECT;
+  document.getElementById("sourceTag").textContent = SOURCE_TEXT;
+  document.title = `${BASE_SUBJECT} Deneme Sınavı`;
+
+  if (performance.navigation.type === performance.navigation.TYPE_RELOAD || !sessionStorage.getItem("session_active")) {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith(storagePrefix())) localStorage.removeItem(k);
+    });
+    sessionStorage.setItem("session_active", "true");
+  }
+
+  let currentQuestions = [];
+  let currentIndex = 0;
+  let solvedIndex = -1;
+  let userAnswers = {};
+  let currentSetKey = "";
+  let stats = { correct: 0, wrong: 0 };
+  let wrongQuestionsMode = false;
+
+  function storagePrefix() {
+    return "exam_" + CURRENT_SUBJECT.replace(/\s+/g, "_") + "_";
+  }
+
+  function setStateKey(index) {
+    return storagePrefix() + "state_set_" + index;
+  }
+
+  function wrongQuestionsKey() {
+    return storagePrefix() + "wrong_questions_pool";
+  }
+
+  function getWrongQuestionsPool() {
+    return JSON.parse(localStorage.getItem(wrongQuestionsKey()) || "[]");
+  }
+
+  function saveWrongQuestionsPool(pool) {
+    localStorage.setItem(wrongQuestionsKey(), JSON.stringify(pool));
+  }
+
+  function addWrongQuestionToPool(question) {
+    const pool = getWrongQuestionsPool();
+
+    const exists = pool.some(item =>
+      item.q === question.q &&
+      JSON.stringify(item.o) === JSON.stringify(question.o)
+    );
+
+    if (!exists) {
+      pool.push({
+        q: question.q,
+        o: [...question.o],
+        c: question.c,
+        e: question.e || ""
+      });
+      saveWrongQuestionsPool(pool);
+    }
+  }
+
+  function normalizeQuestion(q, originalIndex) {
+    return {
+      id: q.id || ("q_" + originalIndex + "_" + Math.random().toString(36).slice(2, 8)),
+      originalNo: originalIndex + 1,
+      q: q.q,
+      o: [...q.o],
+      c: q.c,
+      e: q.e || "",
+      isRetry: q.isRetry || false,
+      retryFrom: q.retryFrom || null,
+      retryCount: q.retryCount || 0,
+      answeredCorrectly: q.answeredCorrectly || false
+    };
+  }
+
+  function initMenu() {
+    const menuGrid = document.getElementById("menuGrid");
+    menuGrid.innerHTML = "";
+
+    const totalSets = Math.ceil(questions.length / QUESTIONS_PER_SET);
+
+    let setsPerButton = 1;
+    let buttonCount = totalSets;
+
+    if (buttonCount > 10) {
+      setsPerButton = 2;
+      buttonCount = Math.ceil(totalSets / setsPerButton);
+    }
+
+    buttonCount = Math.min(buttonCount, 10);
+
+    for (let i = 0; i < buttonCount; i++) {
+      const startSetNo = i * setsPerButton + 1;
+      const endSetNo = Math.min(startSetNo + setsPerButton - 1, totalSets);
+
+      const start = (startSetNo - 1) * QUESTIONS_PER_SET;
+      const end = Math.min(endSetNo * QUESTIONS_PER_SET, questions.length);
+
+      if (start >= questions.length) continue;
+
+      const key = setStateKey(i);
+
+      const saved = JSON.parse(localStorage.getItem(key) || "null");
+      const solved = saved ? Object.keys(saved.userAnswers || {}).length : 0;
+      const correct = saved?.stats?.correct || 0;
+      const wrong = saved?.stats?.wrong || 0;
+
+      const totalCurrent = saved?.currentQuestions?.length || (end - start);
+      const isCompleted = saved ? (solved >= totalCurrent && totalCurrent > 0) : false;
+
+      const label = startSetNo === endSetNo
+        ? `Deneme-${startSetNo} (${BASE_SUBJECT})`
+        : `Deneme-${startSetNo}-${endSetNo} (${BASE_SUBJECT})`;
+
+      const btn = document.createElement("button");
+      btn.className = `menu-btn ${isCompleted ? "locked" : ""}`;
+      btn.innerHTML = `
+        <strong>${label}</strong><br>
+        <small>${end - start} Soru | Çözülen ${solved} (Doğru ${correct} Yanlış ${wrong})</small>
+      `;
+
+      if (!isCompleted) {
+        btn.onclick = () => startSet(i, key, start, end);
+      }
+
+      menuGrid.appendChild(btn);
+    }
+
+    const wrongPool = getWrongQuestionsPool();
+
+    if (wrongPool.length > 0) {
+      const wrongBtn = document.createElement("button");
+      wrongBtn.className = "wrong-menu-btn";
+      wrongBtn.innerHTML = `
+        <strong>Yanlış Yapılan Sorular</strong><br>
+        <small>${wrongPool.length} Soru | Yeniden çöz</small>
+      `;
+      wrongBtn.onclick = openWrongQuestions;
+      menuGrid.appendChild(wrongBtn);
+    }
+  }
+
+  function openWrongQuestions() {
+    const pool = getWrongQuestionsPool();
+    if (!pool.length) return;
+
+    wrongQuestionsMode = true;
+    currentSetKey = storagePrefix() + "wrong_questions_state";
+
+    const saved = JSON.parse(localStorage.getItem(currentSetKey) || "null");
+
+    if (saved) {
+      currentQuestions = saved.currentQuestions;
+      currentIndex = saved.currentIndex;
+      solvedIndex = saved.solvedIndex;
+      userAnswers = saved.userAnswers || {};
+      stats = saved.stats || { correct: 0, wrong: 0 };
+    } else {
+      currentQuestions = pool.map((q, i) => ({
+        id: "wrong_" + i + "_" + Math.random().toString(36).slice(2, 8),
+        originalNo: i + 1,
+        q: q.q,
+        o: [...q.o],
+        c: q.c,
+        e: q.e || "",
+        isRetry: false,
+        retryFrom: null,
+        retryCount: 0,
+        answeredCorrectly: false
+      }));
+
+      currentIndex = 0;
+      solvedIndex = -1;
+      userAnswers = {};
+      stats = { correct: 0, wrong: 0 };
+      saveState();
+    }
+
+    document.getElementById("menuContainer").style.display = "none";
+    document.getElementById("quizContainer").style.display = "block";
+    document.getElementById("headerSubject").textContent = "Yanlış Yapılan Sorular";
+    loadQuestion();
+    window.scrollTo(0, 0);
+  }
+
+  function startSet(idx, key, start, end) {
+    wrongQuestionsMode = false;
+    currentSetKey = key;
+
+    const saved = JSON.parse(localStorage.getItem(key) || "null");
+
+    if (saved) {
+      currentQuestions = saved.currentQuestions;
+      currentIndex = saved.currentIndex;
+      solvedIndex = saved.solvedIndex;
+      userAnswers = saved.userAnswers || {};
+      stats = saved.stats || { correct: 0, wrong: 0 };
+    } else {
+      currentQuestions = questions.slice(start, end).map((q, i) => normalizeQuestion(q, start + i));
+      currentIndex = 0;
+      solvedIndex = -1;
+      userAnswers = {};
+      stats = { correct: 0, wrong: 0 };
+      saveState();
+    }
+
+    document.getElementById("menuContainer").style.display = "none";
+    document.getElementById("quizContainer").style.display = "block";
+    document.getElementById("headerSubject").textContent = BASE_SUBJECT;
+    loadQuestion();
+    window.scrollTo(0, 0);
+  }
+
+  function getQuestionTitle(q) {
+    const cleanQ = String(q.q || "").replace(/^\s*Soru-\d+\s*:\s*/i, "");
+    return `Soru-${q.originalNo} : ${cleanQ}`;
+  }
+
+  function loadQuestion() {
+    const q = currentQuestions[currentIndex];
+    const progress = ((currentIndex + 1) / currentQuestions.length) * 100;
+
+    document.getElementById("progressBar").style.width = progress + "%";
+    document.getElementById("footerLeft").textContent = `Kalan: ${Math.max(currentQuestions.length - (currentIndex + 1), 0)}`;
+    document.getElementById("footerRight").textContent = `${currentIndex + 1} / ${currentQuestions.length}`;
+    document.getElementById("questionText").textContent = getQuestionTitle(q);
+
+    const retryBadge = document.getElementById("retryBadge");
+    retryBadge.style.display = q.isRetry ? "block" : "none";
+
+    const optArea = document.getElementById("optionsArea");
+    const expArea = document.getElementById("explanationArea");
+    optArea.innerHTML = "";
+    expArea.style.display = "none";
+    expArea.innerHTML = "";
+
+    const letters = ["A", "B", "C", "D", "E"];
+
+    q.o.forEach((opt, idx) => {
+      const btn = document.createElement("button");
+      btn.className = "option-btn";
+      btn.innerHTML = `<strong>${letters[idx]})</strong> ${opt}`;
+
+      if (currentIndex <= solvedIndex) {
+        btn.disabled = true;
+        const userChoice = userAnswers[currentIndex];
+
+        if (idx === userChoice) {
+          if (userChoice === q.c) {
+            btn.classList.add("correct");
+            btn.innerHTML += ` <span class="tick show">✔</span>`;
+          } else {
+            btn.classList.add("wrong");
+          }
+        }
+
+        if (wrongQuestionsMode) {
+          if (idx === q.c) {
+            btn.classList.add("correct");
+            btn.innerHTML += ` <span class="tick show">✔</span>`;
+          }
+          expArea.innerHTML = `<strong>Açıklama:</strong> ${String(q.e || "").replace(/^\s*Açıklama\s*:\s*/i, "")}`;
+          expArea.style.display = "block";
+        } else {
+          if (userChoice === q.c) {
+            expArea.innerHTML = `<strong>Açıklama:</strong> ${String(q.e || "").replace(/^\s*Açıklama\s*:\s*/i, "")}`;
+            expArea.style.display = "block";
+          } else if (q.isRetry) {
+            if (idx === q.c) {
+              btn.classList.add("correct");
+              btn.innerHTML += ` <span class="tick show">✔</span>`;
+            }
+            expArea.innerHTML = `<strong>Açıklama:</strong> ${String(q.e || "").replace(/^\s*Açıklama\s*:\s*/i, "")}`;
+            expArea.style.display = "block";
+          }
+        }
+      } else {
+        btn.onclick = () => selectOption(idx);
+      }
+
+      optArea.appendChild(btn);
+    });
+
+    document.getElementById("prevBtn").style.visibility = currentIndex > 0 ? "visible" : "hidden";
+    document.getElementById("nextBtn").style.visibility = currentIndex <= solvedIndex ? "visible" : "hidden";
+  }
+
+  function selectOption(idx) {
+    const q = currentQuestions[currentIndex];
+    const isCorrect = idx === q.c;
+
+    userAnswers[currentIndex] = idx;
+    solvedIndex = Math.max(solvedIndex, currentIndex);
+
+    if (isCorrect) {
+      stats.correct++;
+      q.answeredCorrectly = true;
+    } else {
+      stats.wrong++;
+
+      if (wrongQuestionsMode) {
+        // Yanlış Yapılan Sorular modunda soru yeniden eklenmez.
+      } else {
+        addWrongQuestionToPool(q);
+
+        if (!q.isRetry) {
+          const retryQuestion = {
+            ...q,
+            isRetry: true,
+            retryFrom: q.originalNo,
+            retryCount: 1
+          };
+
+          const insertIndex = Math.min(currentIndex + 5, currentQuestions.length);
+          currentQuestions.splice(insertIndex, 0, retryQuestion);
+        }
+      }
+    }
+
+    saveState();
+    loadQuestion();
+  }
+
+  function saveState() {
+    localStorage.setItem(currentSetKey, JSON.stringify({
+      currentQuestions,
+      currentIndex,
+      solvedIndex,
+      userAnswers,
+      stats
+    }));
+  }
+
+  function goForward() {
+    if (currentIndex < solvedIndex) {
+      currentIndex = solvedIndex + 1;
+    } else if (currentIndex < currentQuestions.length - 1) {
+      currentIndex++;
+    } else {
+      return showMenu();
+    }
+
+    saveState();
+    loadQuestion();
+    window.scrollTo(0, 0);
+  }
+
+  function goBack() {
+    if (currentIndex > 0) {
+      currentIndex--;
+      saveState();
+      loadQuestion();
+      window.scrollTo(0, 0);
+    }
+  }
+
+  function showMenu() {
+    wrongQuestionsMode = false;
+    document.getElementById("headerSubject").textContent = BASE_SUBJECT;
+    document.getElementById("quizContainer").style.display = "none";
+    document.getElementById("menuContainer").style.display = "block";
+    initMenu();
+    window.scrollTo(0, 0);
+  }
+
+  function clearAllStatistics() {
+    if (confirm("Tüm veriler sıfırlansın mı?")) {
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith(storagePrefix())) localStorage.removeItem(k);
+      });
+      initMenu();
+    }
+  }
+
+  function resetCurrentSet() {
+    if (confirm("Bu deneme sıfırlansın mı?")) {
+      localStorage.removeItem(currentSetKey);
+      showMenu();
+    }
+  }
+
+  initMenu();
+</script>
+
+<script>
+function shuffleAllQuestions() {
+  if (!confirm("Tüm sorular ve şıkları karıştırılsın mı?")) return;
+
+  questions.forEach(q => {
+    const correct = q.o[q.c];
+    for (let i = q.o.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [q.o[i], q.o[j]] = [q.o[j], q.o[i]];
+    }
+    q.c = q.o.findIndex(x => x === correct);
+  });
+
+  for (let i = questions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [questions[i], questions[j]] = [questions[j], questions[i]];
+  }
+
+  if (typeof storagePrefix === "function") {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith(storagePrefix())) localStorage.removeItem(k);
+    });
+  }
+
+  alert("Sorular karıştırıldı!");
+  if (typeof initMenu === "function") initMenu();
+}
+
+function printExam() {
+  const examTitle = (document.getElementById('mainTitle')?.textContent || document.title || 'Sınav').trim();
+  let html = '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8"><title>' + examTitle + '</title><style>' +
+    '@page { size: A4; margin: 14mm; }' +
+    'body { font-family: Arial, sans-serif; color:#000; line-height:1.45; font-size:12pt; }' +
+    'h1 { text-align:center; font-size:18pt; margin:0 0 8mm; }' +
+    '.meta { margin-bottom:8mm; font-size:11pt; }' +
+    '.meta div { margin: 3mm 0; }' +
+    '.question { margin-bottom:6mm; page-break-inside: avoid; }' +
+    '.qtext { font-weight:bold; white-space: pre-line; }' +
+    '.options { margin-top:2mm; margin-left:6mm; }' +
+    '.options div { margin:1.4mm 0; white-space: pre-line; }' +
+    '.answer-key { page-break-before: always; margin-top: 8mm; }' +
+    '.answer-key h2 { text-align:center; font-size:16pt; margin:0 0 6mm; }' +
+    '.answer-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 3mm 8mm; font-size:11pt; }' +
+    '.answer-item { padding:2mm 0; border-bottom:1px solid #ccc; }' +
+    '</style></head><body>' +
+    '<h1>' + examTitle + '</h1>' +
+    '<div class="meta"><div>Adı Soyadı: _________________________________</div><div>Tarih: ____ / ____ / ________</div><div>İmza: _________________________________</div></div>';
+
+  questions.forEach((q, i) => {
+    const labels = ['A', 'B', 'C', 'D', 'E'];
+    html += '<div class="question"><div class="qtext">Soru-' + (i + 1) + ': ' + q.q + '</div><div class="options">';
+    q.o.forEach((opt, idx) => {
+      html += '<div>' + labels[idx] + ') ' + opt + '</div>';
+    });
+    html += '</div></div>';
+  });
+
+  html += '<div class="answer-key"><h2>Cevap Anahtarı</h2><div class="answer-grid">';
+  questions.forEach((q, i) => {
+    const labels = ['A', 'B', 'C', 'D', 'E'];
+    const correct = labels[q.c] || '';
+    html += '<div class="answer-item">' + (i + 1) + '. Soru: ' + correct + '</div>';
+  });
+  html += '</div></div></body></html>';
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); }, 250);
+}
+
+</script>
+
+
+<button onclick="printExam()" id="printExamBtn" style="position:fixed;top:10px;right:10px;z-index:10000;background:#111;color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:bold;">🖨 Yazdır</button>
+</body>
+</html>
